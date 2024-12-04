@@ -20,11 +20,11 @@ class TodoListView extends StatelessWidget{
 
   Widget getListView() {
     var listView = ListView.builder(
-      itemCount: searchTerm == ''? todos.length : searchResult.length,
+      itemCount: todos.length ,
       itemBuilder: (context,index) {
         return ListTile(
           leading: const Icon(Icons.arrow_right_sharp),
-          title: Text(searchTerm == ''? todos[index].item : searchResult[index].item),
+          title: Text(todos[index].item),
           trailing:  Wrap(
             spacing: 12,
             children: <Widget>[

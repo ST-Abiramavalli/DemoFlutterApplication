@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:todo_list/models/todo.dart';
 
@@ -6,7 +8,8 @@ class TodoController {
   List<Todo> searchResult = [];
 
   void addTodo(String value) {
-    toDos.add(Todo(item:value));
+    int randomNumber = Random().nextInt(100);
+    toDos.add(Todo(item:value,id:randomNumber));
   }
 
   void updateTodo(int index, String value) {

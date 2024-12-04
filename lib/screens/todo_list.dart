@@ -26,7 +26,7 @@ class TodoListing extends StatefulWidget{
   @override
   void initState() {
     super.initState();
-    getValues();
+    getValues(searchTerm);
   }
 
   void _addEditTodo(BuildContext context,String action) async {
@@ -34,15 +34,14 @@ class TodoListing extends StatefulWidget{
       FocusManager.instance.primaryFocus?.unfocus();
       setState(() {
         if(buttonName == 'Add') {
-         todoController.addTodo(fieldText.text);
+          todoController.addTodo(fieldText.text);
+          addPreferenceItems();
         } else {
-          todoController.updateTodo(selectedIndex, fieldText.text);
+          updatePreferenceItems('edit',fieldText.text);
           buttonName = 'Add';
-          selectedIndex =-1;
         }
       });
       fieldText.clear();
-      updatePreferenceItems();
     } else {
       Helper.showSnackBar(context, "Please enter the name");
     }
@@ -58,9 +57,9 @@ class TodoListing extends StatefulWidget{
 
   void _deleteTodo(int index) {
     setState(() {
-      todoController.deleteTodo(index);
+      selectedIndex = index;
+      updatePreferenceItems('delete','');
     });
-    updatePreferenceItems();
   }
 
   @override
@@ -75,21 +74,25 @@ class TodoListing extends StatefulWidget{
         child: (
           Column(
             children: <Widget>[
-              // SearchBar(controller: searchController,
-              //  hintText: 'Search',
-              //   onChanged: (value) {
-              //    searchItems(value);
-              //   },
-              //   trailing: [searchController.text.isNotEmpty? IconButton(onPressed: () {
-              //     searchController.clear();
-              //     setState(() {
-              //       searchTerm = "";
-              //     });
-              //   }, icon: const Icon(Icons.clear)):IconButton(onPressed: () {
+              SearchBar(controller: searchController,
+               hintText: 'Search',
+                onChanged: (value) {
+                setState(() {
+                  searchTerm = value;
+                });
+                 getValues(value);
+                },
+                trailing: [searchController.text.isNotEmpty? IconButton(onPressed: () {
+                  searchController.clear();
+                  setState(() {
+                    searchTerm = "";
+                  });
+                  getValues(searchTerm);
+                }, icon: const Icon(Icons.clear)):IconButton(onPressed: () {
 
-              //   }, icon: const Icon(Icons.search))]
-              // ),
-              // const SizedBox(height: 16.0),
+                }, icon: const Icon(Icons.search))]
+              ),
+              const SizedBox(height: 16.0),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
@@ -140,26 +143,47 @@ class TodoListing extends StatefulWidget{
     return [];
   }
 
-  void updatePreferenceItems() async {
+  void updatePreferenceItems(String action,String value) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<Todo> list = await getPreferenceItems();
+    int originalIndex = -1;
+    debugPrint("selectedIndex:$selectedIndex");
+    for(int i=0; i < list.length; i++) {
+      if(todoController.toDos[selectedIndex].id == list[i].id)
+      {
+        originalIndex = i;
+      }
+    }
+    debugPrint("originalIndex:$originalIndex");
+    if(originalIndex != -1) {
+      if(action == 'edit') {
+        list[originalIndex].item = value;
+        todoController.updateTodo(selectedIndex, value);
+      } else {
+        list.removeAt(originalIndex);
+        todoController.deleteTodo(selectedIndex);
+      }
+    }
+    List<String> jsonStringList = list.map((item) => jsonEncode(item.toJson())).toList();
+    await prefs.setStringList('items', jsonStringList);
+    setState(() {
+      selectedIndex =-1;
+    });
+  }
+
+  void addPreferenceItems() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String> jsonStringList = todoController.toDos.map((item) => jsonEncode(item.toJson())).toList();
     await prefs.setStringList('items', jsonStringList);
   }
 
-  void getValues () async {
+  void getValues (String searchTerm) async {
     List<Todo> list = await getPreferenceItems();
     setState(() {
-      todoController.toDos = list;
-    });
-  }
-
-  void searchItems(String value) {
-    setState(() {
-      searchTerm = value;
       if(searchTerm == "") {
-        getValues();
+        todoController.toDos = list;
       } else {
-        todoController.search(value);
+        todoController.toDos = list.where((element) => element.item.toLowerCase().startsWith(searchTerm.toLowerCase())).toList();
       }
     });
   }
